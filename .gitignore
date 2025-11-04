@@ -1,23 +1,22 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# production
-/build
-
-# misc
+# === NODE / REACT STANDARD ===
+node_modules/
+build/
+coverage/
 .DS_Store
+
+# === ENVIRONMENT SECRETS ===
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
+# === LOG FILES ===
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# === FIREBASE & CONFIG CACHE ===
+.firebase/
+.firebaserc
+*.cache
