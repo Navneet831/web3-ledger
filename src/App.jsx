@@ -1,5 +1,6 @@
-// src/App.jsx
+// src/App.jsx - Operational & Crash-Proofed with Minimal Dark Theme
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+// Ensure you are using the named export { db } from the updated config file
 import { db } from "./firebaseConfig";
 import {
   collection,
@@ -13,17 +14,27 @@ import {
 } from "firebase/firestore";
 import { ethers } from "ethers";
 
-// === Basic contract placeholders ===
+// === Constants and Utility Functions ===
 const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
 const CONTRACT_ABI = [];
 
-const formatCurrency = (n) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(n || 0);
+const RUPEES_IN_CRORE = 10000000;
+const formatCurrency = (n) => {
+    // Convert raw number (in Rupees) to Crores (Cr.)
+    const valueInCrores = (n || 0) / RUPEES_IN_CRORE;
+    
+    // Use Intl.NumberFormat for Indian Rupee symbol and two decimal places
+    const formatted = new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(valueInCrores);
+
+    // Append " Cr." for clarity
+    return `${formatted} Cr.`;
+};
+
 
 const formatDate = (t) =>
   t?.toDate ? t.toDate().toLocaleDateString("en-IN") : new Date(t).toLocaleDateString("en-IN");
@@ -45,6 +56,12 @@ const App = () => {
 
   // --- Firestore realtime data ---
   useEffect(() => {
+    // CRITICAL FIX: Ensure db is initialized before attempting Firestore calls
+    if (!db) {
+        console.warn("Firestore not available. Cannot fetch data.");
+        return; 
+    }
+
     const mq = query(collection(db, "members"), orderBy("createdAt", "asc"));
     const tq = query(collection(db, "transactions"), orderBy("timestamp", "desc"));
 
@@ -58,7 +75,7 @@ const App = () => {
       unsubM();
       unsubT();
     };
-  }, []);
+  }, []); // Dependency array is intentionally empty for initial fetch
 
   // --- Web3 Connect ---
   const connectWallet = async () => {
@@ -83,6 +100,7 @@ const App = () => {
   // --- Add member ---
   const addMember = async (e) => {
     e.preventDefault();
+    if (!db) { setMessage("Error: Database not connected."); return; }
     if (!newMember.trim()) return;
     await addDoc(collection(db, "members"), {
       name: newMember.trim(),
@@ -94,6 +112,7 @@ const App = () => {
   // --- Record transaction ---
   const recordTransaction = async (e) => {
     e.preventDefault();
+    if (!db) { setMessage("Error: Database not connected."); return; }
     if (!txForm.memberId || !txForm.amount) return;
     const amt =
       txForm.type === "deposit"
@@ -114,6 +133,7 @@ const App = () => {
 
   // --- Delete transaction ---
   const deleteTx = async (id) => {
+    if (!db) { setMessage("Error: Database not connected."); return; }
     await deleteDoc(doc(db, "transactions", id));
   };
 
@@ -128,34 +148,63 @@ const App = () => {
     return { totalIn: tin, totalOut: tout, net: tin - tout };
   }, [transactions]);
 
+  const cardStyle = { 
+      flex: 1, 
+      background: "#111827", 
+      padding: 16, 
+      borderRadius: 12, 
+      boxShadow: "0 4px 8px rgba(0, 0, 0, 0.4)",
+      border: "1px solid #1F2937" 
+  };
+  const inputStyle = {
+    width: "100%",
+    padding: 10,
+    borderRadius: 6,
+    background: "#0B1220",
+    border: "1px solid #374151",
+    color: "#fff",
+    marginBottom: 8,
+  };
+  const buttonStyle = {
+    padding: "8px 14px",
+    borderRadius: 8,
+    background: "#059669",
+    color: "#fff",
+    border: "none",
+    fontWeight: "bold",
+    cursor: 'pointer',
+  };
+
   return (
     <div
       style={{
-        background: "#0B1220",
-        color: "#E5E7EB",
+        background: "#0A0E13", // Solid Dark Background
+        color: "#E5E7EB", // High contrast text
         minHeight: "100vh",
-        padding: 20,
-        fontFamily: "Inter, Arial",
+        padding: 32,
+        fontFamily: "Inter, sans-serif",
       }}
     >
       <div style={{ maxWidth: 1000, margin: "auto" }}>
-        <h1 style={{ textAlign: "center" }}>Web3 Ledger</h1>
+        <h1 style={{ textAlign: "center", color: "#1E90FF" }}>Web3 Ledger</h1>
 
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24, borderBottom: "1px solid #1F2937", paddingBottom: 16 }}>
           <button
             onClick={connectWallet}
             style={{
-              padding: "8px 14px",
+              padding: "10px 18px",
               borderRadius: 8,
-              background: "#2563EB",
+              background: wallet ? "#006400" : "#004080", // High contrast colors
               color: "#fff",
-              border: "none",
+              border: "1px solid #374151",
+              fontWeight: "bold",
+              cursor: 'pointer',
             }}
           >
             {wallet ? "Connected" : "Connect MetaMask"}
           </button>
-          <div style={{ textAlign: "right", fontSize: 14 }}>
-            <div>Status: {status}</div>
+          <div style={{ textAlign: "right", fontSize: 14, background: "#111827", padding: 10, borderRadius: 6, border: "1px solid #1F2937" }}>
+            <div style={{color: status === 'Connected' ? '#10B981' : '#EF4444'}}>Status: {status}</div>
             <div>
               Wallet: {wallet ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : "N/A"}
             </div>
@@ -163,60 +212,51 @@ const App = () => {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-          <div style={{ flex: 1, background: "#111827", padding: 10, borderRadius: 8 }}>
-            <h3>Add Member</h3>
-            <form onSubmit={addMember}>
+        {/* Display an error message if Firebase failed to initialize */}
+        {!db && (
+            <div style={{ padding: 16, background: '#8B0000', color: '#fff', borderRadius: 8, marginBottom: 20 }}>
+                <strong style={{fontSize: 16}}>CRITICAL WARNING: </strong> 
+                Firebase/Database services are unavailable. Please check the browser console for configuration errors. 
+                The UI is rendering, but all data-related functionality is disabled.
+            </div>
+        )}
+
+        <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
+          {/* Add Member Card */}
+          <div style={{ ...cardStyle, flex: 1 }}>
+            <h3 style={{color: '#38BDF8'}}>Add Member</h3>
+            <form onSubmit={addMember} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <input
                 value={newMember}
                 onChange={(e) => setNewMember(e.target.value)}
                 placeholder="Member name"
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 6,
-                  background: "#0B1220",
-                  border: "1px solid #1F2937",
-                  color: "#fff",
-                  marginBottom: 8,
-                }}
+                style={inputStyle}
               />
               <button
                 type="submit"
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  background: "#059669",
-                  color: "#fff",
-                  border: "none",
-                }}
+                style={buttonStyle}
+                disabled={!db}
               >
                 Add
               </button>
             </form>
-            <div style={{ marginTop: 10 }}>
+            <div style={{ marginTop: 16, maxHeight: 150, overflowY: 'auto' }}>
               {members.map((m) => (
-                <div key={m.id}>{m.name}</div>
+                <div key={m.id} style={{ padding: 4, borderBottom: "1px dashed #1F2937", color: '#9CA3AF' }}>{m.name}</div>
               ))}
             </div>
           </div>
 
-          <div style={{ flex: 2, background: "#111827", padding: 10, borderRadius: 8 }}>
-            <h3>Record Transaction</h3>
-            {message && <div style={{ color: "#10B981" }}>{message}</div>}
-            <form onSubmit={recordTransaction}>
+          {/* Record Transaction Card */}
+          <div style={{ ...cardStyle, flex: 2 }}>
+            <h3 style={{color: '#38BDF8'}}>Record Transaction</h3>
+            {message && <div style={{ color: "#10B981", marginBottom: 8 }}>{message}</div>}
+            <form onSubmit={recordTransaction} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <select
                 value={txForm.memberId}
                 onChange={(e) => setTxForm({ ...txForm, memberId: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 6,
-                  background: "#0B1220",
-                  border: "1px solid #1F2937",
-                  color: "#fff",
-                  marginBottom: 8,
-                }}
+                style={inputStyle}
+                disabled={!db}
               >
                 <option value="">Select Member</option>
                 {members.map((m) => (
@@ -228,15 +268,8 @@ const App = () => {
               <select
                 value={txForm.type}
                 onChange={(e) => setTxForm({ ...txForm, type: e.target.value })}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 6,
-                  background: "#0B1220",
-                  border: "1px solid #1F2937",
-                  color: "#fff",
-                  marginBottom: 8,
-                }}
+                style={inputStyle}
+                disabled={!db}
               >
                 <option value="deposit">Deposit</option>
                 <option value="withdrawal">Withdrawal</option>
@@ -244,40 +277,24 @@ const App = () => {
               <input
                 value={txForm.amount}
                 onChange={(e) => setTxForm({ ...txForm, amount: e.target.value })}
-                placeholder="Amount (INR)"
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 6,
-                  background: "#0B1220",
-                  border: "1px solid #1F2937",
-                  color: "#fff",
-                  marginBottom: 8,
-                }}
+                placeholder="Amount (₹)"
+                type="number"
+                min="0.01"
+                step="0.01"
+                style={inputStyle}
+                disabled={!db}
               />
               <input
                 value={txForm.description}
                 onChange={(e) => setTxForm({ ...txForm, description: e.target.value })}
                 placeholder="Description"
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  borderRadius: 6,
-                  background: "#0B1220",
-                  border: "1px solid #1F2937",
-                  color: "#fff",
-                  marginBottom: 8,
-                }}
+                style={inputStyle}
+                disabled={!db}
               />
               <button
                 type="submit"
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  background: "#059669",
-                  color: "#fff",
-                  border: "none",
-                }}
+                style={buttonStyle}
+                disabled={!db}
               >
                 Record
               </button>
@@ -285,29 +302,35 @@ const App = () => {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ flex: 1, background: "#111827", padding: 10, borderRadius: 8 }}>
-            <h3>Transactions</h3>
+        <div style={{ display: "flex", gap: 16 }}>
+          {/* Transactions Card */}
+          <div style={{ ...cardStyle, flex: 1.5, maxHeight: 350, overflowY: 'auto' }}>
+            <h3 style={{color: '#38BDF8'}}>Transactions</h3>
             {transactions.map((t) => (
               <div
                 key={t.id}
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
+                  alignItems: "center",
                   background: "#0B1220",
-                  padding: 8,
+                  padding: 10,
                   borderRadius: 6,
-                  marginBottom: 6,
+                  marginBottom: 8,
+                  borderLeft: `4px solid ${t.amount < 0 ? "#EF4444" : "#10B981"}`,
+                  color: '#fff'
                 }}
               >
                 <div>
-                  <div>{t.description}</div>
+                  <div style={{ fontSize: 14 }}>
+                    {t.description}
+                  </div>
                   <div style={{ fontSize: 12, color: "#9CA3AF" }}>
-                    {formatDate(t.timestamp)} | {t.memberId}
+                    {formatDate(t.timestamp)}
                   </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ color: t.amount < 0 ? "#EF4444" : "#10B981" }}>
+                <div style={{ textAlign: "right", display: 'flex', alignItems: 'center' }}>
+                  <div style={{ color: t.amount < 0 ? "#EF4444" : "#10B981", fontWeight: 'bold', fontSize: 16, marginRight: 10 }}>
                     {formatCurrency(t.amount)}
                   </div>
                   <button
@@ -318,9 +341,10 @@ const App = () => {
                       background: "#EF4444",
                       border: "none",
                       borderRadius: 4,
-                      padding: "2px 6px",
-                      marginTop: 4,
+                      padding: "4px 8px",
+                      cursor: 'pointer',
                     }}
+                    disabled={!db}
                   >
                     Delete
                   </button>
@@ -329,16 +353,23 @@ const App = () => {
             ))}
           </div>
 
-          <div style={{ flex: 0.5, background: "#111827", padding: 10, borderRadius: 8 }}>
-            <h3>Summary</h3>
-            <div>Total In: {formatCurrency(totalIn)}</div>
-            <div>Total Out: {formatCurrency(totalOut)}</div>
-            <div>Net: {formatCurrency(net)}</div>
+          {/* Summary Card */}
+          <div style={{ ...cardStyle, flex: 0.5 }}>
+            <h3 style={{color: '#38BDF8'}}>Summary</h3>
+            <div style={{ padding: 8, borderBottom: "1px solid #374151" }}>
+                Total In: <strong style={{color: '#10B981'}}>{formatCurrency(totalIn)}</strong>
+            </div>
+            <div style={{ padding: 8, borderBottom: "1px solid #374151" }}>
+                Total Out: <strong style={{color: '#EF4444'}}>{formatCurrency(totalOut)}</strong>
+            </div>
+            <div style={{ padding: 8, fontSize: 18, marginTop: 8, background: '#0A0E13', borderRadius: 6, border: '1px solid #1E90FF' }}>
+                Net: <strong style={{color: net >= 0 ? '#1E90FF' : '#EF4444'}}>{formatCurrency(net)}</strong>
+            </div>
           </div>
         </div>
 
-        <div style={{ textAlign: "center", marginTop: 20, fontSize: 12, color: "#9CA3AF" }}>
-          © Navneet Chaudhary
+        <div style={{ textAlign: "center", marginTop: 24, fontSize: 12, color: "#9CA3AF" }}>
+          © Navneet Chaudhary | All financial data in Crores (Cr.)
         </div>
       </div>
     </div>
