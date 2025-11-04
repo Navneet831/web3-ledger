@@ -2,7 +2,6 @@
   "name": "web3-ledger",
   "version": "0.1.0",
   "private": true,
-  "homepage": ".",
   "dependencies": {
     "ethers": "^6.15.0",
     "firebase": "^12.5.0",
