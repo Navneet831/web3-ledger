@@ -1,6 +1,6 @@
-// src/firebaseConfig.js - CRASH-PROOFED
+// src/firebaseConfig.js - FINAL VERSION
 import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously } from "firebase/auth";
+import { getAuth, signInAnonymously } from "firebase/auth"; // Keep import but move execution
 import { getFirestore } from "firebase/firestore";
 
 // Configuration loaded from Vercel Environment Variables (REACT_APP prefix is key for CRA)
@@ -25,11 +25,8 @@ if (firebaseConfig.apiKey) {
     auth = getAuth(app);
     db = getFirestore(app);
 
-    // Auto anonymous login
-    signInAnonymously(auth).catch((err) => {
-      // Log auth error but allow main app to continue if possible
-      console.error("Firebase anonymous auth failed (check auth rules):", err);
-    });
+    // REMOVED: signInAnonymously(auth).catch((err) => { ... });
+    // This asynchronous call is now handled inside App.jsx
 
   } catch (err) {
     console.error("FATAL: Firebase App Initialization Failed:", err);
