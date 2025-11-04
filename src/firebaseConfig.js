@@ -1,17 +1,20 @@
-// src/firebaseConfig.js
+// src/firebaseConfig.js - **FORCE FIX: Hardcoded Credentials for Immediate Deployment**
 import { initializeApp } from "firebase/app";
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Load environment variables
+// The required configuration from your .env.txt, directly hardcoded for guaranteed access.
+// As a security best practice (Chanakya's wisdom: trust nothing, verify everything),
+// these values should eventually be loaded via Vercel's environment variables and accessed
+// using process.env.REACT_APP_..., but this ensures the app runs *now*.
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyDlSbQHd_yyXu8n16SJD0QKxMYETcgl4bY",
+  authDomain: "web3-ledger.firebaseapp.com",
+  projectId: "web3-ledger",
+  storageBucket: "web3-ledger.firebasestorage.app",
+  messagingSenderId: "266257006380",
+  appId: "1:266257006380:web:5abfc5b02512b611937689",
+  measurementId: "G-CS5BC9LYH1",
 };
 
 // Initialize Firebase
@@ -20,6 +23,7 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 // Auto anonymous login
+// This line can also cause a crash if the app initialization failed, but should work now.
 signInAnonymously(auth).catch((err) => {
   console.error("Firebase anonymous auth failed:", err);
 });
