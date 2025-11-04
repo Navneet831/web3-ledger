@@ -1,10 +1,9 @@
-// src/firebaseConfig.js - Updated to validate environment variables
+// src/firebaseConfig.js - CRASH-PROOFED
 import { initializeApp } from "firebase/app";
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// Load environment variables for Firebase configuration
-// CRA automatically injects REACT_APP_ prefixed environment variables at build time.
+// Configuration loaded from Vercel Environment Variables (REACT_APP prefix is key for CRA)
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -19,29 +18,33 @@ let app;
 let auth;
 let db;
 
-// Brutal truth check: If a critical variable is missing (even if it's supposed to be there), 
-// prevent the fatal crash and log the error clearly.
+// Mandatory check: Only initialize if the critical API key exists
 if (firebaseConfig.apiKey) {
-  // Initialize Firebase if the API key is present
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
 
-  // Auto anonymous login
-  signInAnonymously(auth).catch((err) => {
-    console.error("Firebase anonymous auth failed:", err);
-    // Suppress further errors if auth is disabled or fails gracefully
-  });
+    // Auto anonymous login
+    signInAnonymously(auth).catch((err) => {
+      // Log auth error but allow main app to continue if possible
+      console.error("Firebase anonymous auth failed (check auth rules):", err);
+    });
+
+  } catch (err) {
+    console.error("FATAL: Firebase App Initialization Failed:", err);
+    // On failure, set exports to null to prevent downstream component crashes
+    app = null;
+    auth = null;
+    db = null;
+  }
 } else {
-  // CRITICAL FAILURE POINT: The build step or Vercel environment variable injection failed.
-  console.error(
-    "FATAL ERROR: Firebase API Key is missing. The application cannot initialize Firebase services."
-  );
-  // Assign dummy values to avoid downstream crashes in other components trying to access db/auth
+  console.error("FATAL ERROR: Firebase API Key is missing. Check Vercel Environment Variables.");
   app = null;
-  auth = { currentUser: null };
+  auth = null;
   db = null;
 }
 
+// Export the initialized (or null) objects
 export { auth, db };
 export default app;
