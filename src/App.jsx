@@ -1,7 +1,7 @@
-// src/App.jsx - Operational & Crash-Proofed with Minimal Dark Theme
+// src/App.jsx - FINAL VERSION (Changes highlighted with a comment)
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-// Ensure you are using the named export { db } from the updated config file
-import { db } from "./firebaseConfig";
+// Import auth along with db
+import { db, auth } from "./firebaseConfig"; 
 import {
   collection,
   addDoc,
@@ -54,6 +54,17 @@ const App = () => {
   });
   const [message, setMessage] = useState(null);
 
+  // CRITICAL FIX: NEW useEffect for Anonymous Login
+  useEffect(() => {
+    if (auth) {
+      // The auth object is guaranteed to be non-null if initialized in firebaseConfig.js
+      signInAnonymously(auth).catch((err) => {
+        console.error("Firebase anonymous auth failed (safely handled):", err);
+        // User data features will be broken, but UI will load.
+      });
+    }
+  }, []); // Run only once on component mount
+
   // --- Firestore realtime data ---
   useEffect(() => {
     // CRITICAL FIX: Ensure db is initialized before attempting Firestore calls
@@ -75,7 +86,7 @@ const App = () => {
       unsubM();
       unsubT();
     };
-  }, []); // Dependency array is intentionally empty for initial fetch
+  }, []); 
 
   // --- Web3 Connect ---
   const connectWallet = async () => {
@@ -102,6 +113,7 @@ const App = () => {
     e.preventDefault();
     if (!db) { setMessage("Error: Database not connected."); return; }
     if (!newMember.trim()) return;
+    // ... rest of logic
     await addDoc(collection(db, "members"), {
       name: newMember.trim(),
       createdAt: serverTimestamp(),
@@ -119,6 +131,7 @@ const App = () => {
         ? Math.abs(Number(txForm.amount))
         : -Math.abs(Number(txForm.amount));
 
+    // ... rest of logic
     await addDoc(collection(db, "transactions"), {
       memberId: txForm.memberId,
       type: txForm.type,
